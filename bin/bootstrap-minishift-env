@@ -13,6 +13,9 @@ DM_KVM_VER=v0.8.2
 OC_URL="https://github.com/openshift/origin/releases/download/v1.5.0-rc.0/openshift-origin-client-tools-v1.5.0-rc.0-49a4a7a-linux-64bit.tar.gz"
 OC_DIR=$(echo `basename $OC_URL` | sed s,.tar.gz,,)
 
+#ggID=0B0Y_FKSRY_U7ZllMZHdERlBhQ2c
+#ggURL='https://drive.google.com/uc?export=download'
+
 echo 
 echo "*** Insatlling yum components ***"
 echo
