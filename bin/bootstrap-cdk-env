@@ -1,0 +1,96 @@
+#!/bin/bash
+
+if [ $(id -u) != 0 ]; then
+   echo "This script requires root permissions"
+   sudo "$0" "$@"
+   exit
+fi
+
+DM_VER=v0.12.2
+DM_KVM_VER=v0.8.2
+ggID=0B0Y_FKSRY_U7ZllMZHdERlBhQ2c
+
+echo 
+echo "*** Insatlling yum components ***"
+echo
+
+yum -y update
+yum -y groups install "GNOME Desktop"
+yum -y install epel-release git docker
+systemctl set-default graphical.target
+systemctl enable docker
+
+echo 
+echo "*** Downloading minishift (/usr/local/bin/minishift) ***"
+echo 
+
+# Dowload CDK 3.1.0 from Binary location @ Google Drive
+# https://stackoverflow.com/questions/25010369/wget-curl-large-file-from-google-drive
+ggURL='https://drive.google.com/uc?export=download'
+filename="$(curl -sc /tmp/gcokie "${ggURL}&id=${ggID}" | grep -o '="uc-name.*</span>' | sed 's/.*">//;s/<.a> .*//')"  
+getcode="$(awk '/_warning_/ {print $NF}' /tmp/gcokie)"  
+curl -Lb /tmp/gcokie "${ggURL}&confirm=${getcode}&id=${ggID}" -o /usr/local/bin/minishift
+
+chown root:root /usr/local/bin/minishift
+chmod +x /usr/local/bin/minishift
+
+echo 
+echo "*** Downloading OpenShift Origin Client (/usr/local/docker-mashine) ***"
+echo 
+
+curl -L https://github.com/docker/machine/releases/download/$DM_VER/docker-machine-`uname -s`-`uname -m` > /usr/local/bin/docker-machine && \
+chmod +x /usr/local/bin/docker-machine
+
+echo 
+echo "*** Downloading OpenShift Origin Client (/usr/local/bin/docker-machine-driver-kvm) ***"
+echo 
+
+curl -L https://github.com/dhiltgen/docker-machine-kvm/releases/download/$DM_KVM_VER/docker-machine-driver-kvm > /usr/local/bin/docker-machine-driver-kvm && \
+chmod +x /usr/local/bin/docker-machine-driver-kvm
+
+echo 
+echo "*** Downloading OpenShift Origin Client (/usr/local/bin/oc) ***"
+echo 
+
+# Download OC client
+wget -qO- $OC_URL | tar zxvf - -C /tmp $OC_DIR/oc
+mv -f /tmp/$OC_DIR/oc /usr/local/bin
+chmod +x /usr/local/bin/oc
+chown root:root /usr/local/bin/oc
+rmdir /tmp/$OC_DIR
+
+# Install virt components
+yum install -y qemu-kvm qemu-img virt-manager libvirt libvirt-python libvirt-client virt-install virt-viewer
+
+# Allow minishift to spin up a VM without anoing authorization questions
+# https://superuser.com/questions/548433/how-do-i-prevent-virt-manager-from-asking-for-the-root-password
+cat > /etc/polkit-1/rules.d/10.virt.rules <<EOF
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.libvirt.unix.manage"
+            && subject.local
+            && subject.active
+            && subject.isInGroup("libvirt")) {
+        return polkit.Result.YES;
+        polkit.log("action=" + action);
+        polkit.log("subject=" + subject);
+    }
+});
+EOF
+
+systemctl restart polkit
+usermod -a -G libvirt $SUDO_USER 
+
+grep "^INSECURE" /etc/sysconfig/docker > /dev/null || \
+  { echo "INSECURE_REGISTRY='--insecure-registry 172.30.0.0/16'" >> /etc/sysconfig/docker; \
+    systemctl restart docker; }
+
+# https://releases.hashicorp.com/vagrant/1.8.7/vagrant_1.8.7_x86_64.rpm
+# https://github.com/vagrant-libvirt/vagrant-libvirt
+
+echo 
+echo "*** DONE ***"
+echo "minishift start --cpus 2 --memory 8192 --openshift-version=v1.5.0-rc.0"
+echo 
+
+
+
