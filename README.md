@@ -2,7 +2,7 @@
 
 ### Wiki:https://github.com/pjos/openshift-g2/wiki
 
-### The base is a CentOS 7 minimal installation (this step has already been ran on your laptop) 
+### Requires CentOS 7 minimal installation 
 ```shell:
 sudo yum -y install git
 git clone https://github.com/pjos/openshift-g2.git
