@@ -3,7 +3,7 @@
 #  Openshift G2 dev environment alpha-0.2
 #-----------------------------------------------------------------------------
 #  alpha-0.1: Initial version, Openshift 1.4.1 on CentOS 7.3
-#  alpha-0.2: Java8, Oracle JDK 1.8.0_121 
+#  alpha-0.2: Java8, Oracle JDK 1.8.0_121
 #-----------------------------------------------------------------------------
 
 
@@ -13,12 +13,16 @@ if [ $(id -u) != 0 ]; then
    exit
 fi
 
+#Variabler
+gradle_version=4.2.1
+
+
 # https://github.com/pjos/openshift-g2/wiki
 OC_URL="https://github.com/openshift/origin/releases/download/v1.4.1/openshift-origin-client-tools-v1.4.1-3f9807a-linux-64bit.tar.gz"
 OC_URL="https://github.com/openshift/origin/releases/download/v1.5.1/openshift-origin-client-tools-v1.5.1-7b451fc-linux-64bit.tar.gz"
 
 
-echo 
+echo
 echo "*** Insatlling yum components ***"
 echo
 
@@ -38,55 +42,69 @@ grep "^INSECURE" /etc/sysconfig/docker > /dev/null || \
 groupadd docker
 usermod -aG docker $SUDO_USER
 
-# Disable libvirtd, otherwise oc won't be abel to bind it self to 53/tcp/udp  
+# Disable libvirtd, otherwise oc won't be abel to bind it self to 53/tcp/udp
 systemctl stop libvirtd
 systemctl disable libvirtd
 
 
 # Download and install OC client
-wget -qO- $OC_URL | tar zxvf - -C /tmp
-mv -f /tmp/openshift-origin-client-tools*/oc /usr/local/bin
-chmod +x /usr/local/bin/oc
-chown root:root /usr/local/bin/oc
-rm -rf /tmp/openshift-origin-client-tools*
-test -h /usr/bin/oc || ln -s /usr/local/bin/oc /usr/bin/oc
+#wget -qO- $OC_URL | tar zxvf - -C /tmp
+#mv -f /tmp/openshift-origin-client-tools*/oc /usr/local/bin
+#chmod +x /usr/local/bin/oc
+#chown root:root /usr/local/bin/oc
+#rm -rf /tmp/openshift-origin-client-tools*
+#test -h /usr/bin/oc || ln -s /usr/local/bin/oc /usr/bin/oc
 
 # https://github.com/openshift/origin/issues/10139#issuecomment-270503837
 # "oc cluster up" will not start properly without this.
 firewall-cmd --permanent --add-port=8443/tcp --add-port=53/udp
 
 #Download JDK 8
-test -d /opt/jdk1.8.0_131 || \
-  wget -qO- --no-cookies --no-check-certificate --header \
+test -d /usr/java/jdk1.8.0_144/ || \
+  wget --no-cookies --no-check-certificate --header \
   "Cookie: gpw_e24=http%3A%2F%2Fwww.oracle.com%2F; oraclelicense=accept-securebackup-cookie" \
-  "http://download.oracle.com/otn-pub/java/jdk/8u131-b11/d54c1d3a095b4ff2b6607d096fa80163/jdk-8u131-linux-x64.tar.gz" | \
-   tar zxf - -C /opt
-ln -sfn /opt/jdk1.8.0_131 /opt/jdk
-
-#Download IntelliJ
-#wget -qO- https://download.jetbrains.com/idea/ideaIC-2016.3.5.tar.gz
+  "http://download.oracle.com/otn-pub/java/jdk/8u144-b01/090f390dda5b47b9b721c7dfaa008135/jdk-8u144-linux-x64.rpm"
+sudo yum install -y jdk-8u144-linux-x64.rpm
+sudo rm -rf jdk-8u144-linux-x64.rpm
 
 cat > /etc/profile.d/java.sh <<EOF
 #-------------------------------------------
 # Provide profile script to set up Gradle  environment
 #-------------------------------------------
-[[ -z "\$JAVA_HOME" ]] && export JAVA_HOME=/opt/jdk
-[[ -z "\$JRE_HOME" ]] && export JRE_HOME=/opt/jdk/jre
-[[ \$PATH != ?(*:)/opt/jdk/bin?(:*) ]]  && export PATH=/opt/jdk/bin:\$PATH
-[[ \$PATH != ?(*:)/opt/jdk/jre/bin?(:*) ]]  && export PATH=/opt/jdk/jre/bin:\$PATH
+[[ -z "\$JAVA_HOME" ]] && export JAVA_HOME=/usr/java/latest
+[[ -z "\$JRE_HOME" ]] && export JRE_HOME=/usr/java/latest/jre
+[[ \$PATH != ?(*:)/usr/java/latest/bin?(:*) ]]  && export PATH=/usr/java/latest/bin:\$PATH
+[[ \$PATH != ?(*:)/usr/java/latest/jre/bin?(:*) ]]  && export PATH=/usr/java/latest/jre/bin:\$PATH
 EOF
+sudo bash /etc/profile.d/java.sh
 
 # Install Google Chrome
 cat > /etc/yum.repos.d/google-chrome.repo <<EOF
 [google-chrome]
 name=google-chrome
-baseurl=http://dl.google.com/linux/chrome/rpm/stable/$basearch
+baseurl=http://dl.google.com/linux/chrome/rpm/stable/\$basearch
 enabled=1
 gpgcheck=1
 gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub
 EOF
 yum -y update
 yum -y install google-chrome-stable
+
+# Install gradle-4
+mkdir /opt/gradle
+wget -N http://services.gradle.org/distributions/gradle-${gradle_version}-all.zip
+sudo unzip -oq ./gradle-${gradle_version}-all.zip -d /opt/gradle
+echo
+echo "GRADLE_VERSON: ${gradle_version}"
+echo
+sudo ln -sfnv /opt/gradle/gradle-${gradle_version} /opt/gradle/latest
+sudo printf "export GRADLE_HOME=/opt/gradle/latest\nexport PATH=\$PATH:\$GRADLE_HOME/bin" | sudo tee -a /etc/profile.d/gradle.sh
+. /etc/profile.d/gradle.sh
+hash -r ; sync
+# check installation
+gradle -v
+sudo rm -rf gradle-${gradle_version}-all.zip
+
 
 echo "You need to reboot your system if this is an initial bootstrap:"
 echo "sudo reboot"
