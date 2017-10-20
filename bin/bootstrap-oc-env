@@ -46,6 +46,8 @@ usermod -aG docker $SUDO_USER
 systemctl stop libvirtd
 systemctl disable libvirtd
 
+# Need to set computers hostname in /etc/hosts, otherwise some program start very slow
+sed -i "/127.0.0.1/s/$/ $HOSTNAME/" /etc/hosts
 
 # Download and install OC client
 #wget -qO- $OC_URL | tar zxvf - -C /tmp
