@@ -7,14 +7,14 @@ if [ $(id -u) != 0 ]; then
 fi
 
 # https://github.com/pjos/openshift-wiki/wiki
-MINISHIFT_VER=1.0.0-rc.1
-DM_VER=v0.10.0
-DM_KVM_VER=v0.8.2
-OC_URL="https://github.com/openshift/origin/releases/download/v1.5.0-rc.0/openshift-origin-client-tools-v1.5.0-rc.0-49a4a7a-linux-64bit.tar.gz"
-OC_DIR=$(echo `basename $OC_URL` | sed s,.tar.gz,,)
+MINISHIFT_VER=1.9.0
+DM_VER=v0.13.0
+DM_KVM_VER=v0.10.0
 
-#ggID=0B0Y_FKSRY_U7ZllMZHdERlBhQ2c
-#ggURL='https://drive.google.com/uc?export=download'
+
+
+
+
 
 echo 
 echo "*** Insatlling yum components ***"
@@ -29,23 +29,20 @@ systemctl enable docker
 echo 
 echo "*** Downloading minishift (/usr/local/bin/minishift) ***"
 echo 
-
-wget -qO- https://github.com/minishift/minishift/releases/download/v$MINISHIFT_VER/minishift-$MINISHIFT_VER-linux-amd64.tgz | tar zxf - -C /usr/local/bin minishift
+curl -L https://github.com/minishift/minishift/releases/download/v$MINISHIFT_VER/minishift-$MINISHIFT_VER-linux-amd64.tgz | tar zxf - -C /usr/local/bin minishift
 chown root:root /usr/local/bin/minishift
 chmod +x /usr/local/bin/minishift
 
 echo 
 echo "*** Downloading OpenShift Origin Client (/usr/local/docker-mashine) ***"
 echo 
-
 curl -L https://github.com/docker/machine/releases/download/$DM_VER/docker-machine-`uname -s`-`uname -m` > /usr/local/bin/docker-machine && \
 chmod +x /usr/local/bin/docker-machine
 
 echo 
 echo "*** Downloading OpenShift Origin Client (/usr/local/bin/docker-machine-driver-kvm) ***"
 echo 
-
-curl -L https://github.com/dhiltgen/docker-machine-kvm/releases/download/$DM_KVM_VER/docker-machine-driver-kvm > /usr/local/bin/docker-machine-driver-kvm && \
+curl -L https://github.com/dhiltgen/docker-machine-kvm/releases/download/$DM_KVM_VER/docker-machine-driver-kvm-centos7 > /usr/local/bin/docker-machine-driver-kvm && \
 chmod +x /usr/local/bin/docker-machine-driver-kvm
 
 echo 
@@ -53,11 +50,11 @@ echo "*** Downloading OpenShift Origin Client (/usr/local/bin/oc) ***"
 echo 
 
 # Download OC client
-wget -qO- $OC_URL | tar zxvf - -C /tmp $OC_DIR/oc
-mv -f /tmp/$OC_DIR/oc /usr/local/bin
-chmod +x /usr/local/bin/oc
-chown root:root /usr/local/bin/oc
-rmdir /tmp/$OC_DIR
+#wget -qO- $OC_URL | tar zxvf - -C /tmp $OC_DIR/oc
+#mv -f /tmp/$OC_DIR/oc /usr/local/bin
+#chmod +x /usr/local/bin/oc
+#chown root:root /usr/local/bin/oc
+#rmdir /tmp/$OC_DIR
 
 # Install virt components
 yum install -y qemu-kvm qemu-img virt-manager libvirt libvirt-python libvirt-client virt-install virt-viewer
